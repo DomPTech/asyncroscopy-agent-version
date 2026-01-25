@@ -93,11 +93,17 @@ class ExecutionProtocol(Int32StringReceiver):
 
             result = method(args_dict)
 
-            # Everything going back is bytes
-            if not isinstance(result, (bytes, bytearray)):
-                result = str(result).encode()
-
-            self.sendString(result)
+            # Check if result looks like it's already a packaged message (starts with '[')
+            # and is already in bytes.
+            if isinstance(result, (bytes, bytearray)) and result.startswith(b'['):
+                self.sendString(result)
+            elif isinstance(result, (bytes, bytearray)):
+                # If it's bytes but not a package, package it as bytes
+                self.sendString(package_message(result))
+            else:
+                # Otherwise package as appropriate (string, etc)
+                self.sendString(package_message(result))
+            
             self.log.debug("Sent response for command '%s'", cmd)
 
         except Exception:
@@ -116,7 +122,7 @@ class ExecutionProtocol(Int32StringReceiver):
             if not name.startswith("_") and callable(getattr(self, name))
         ]
         cmds.sort()
-        self.sendString(package_message(json.dumps(cmds)))
+        return package_message(json.dumps(cmds))
 
     def get_help(self, args: dict):
         """Help on a specific command."""
@@ -134,4 +140,4 @@ class ExecutionProtocol(Int32StringReceiver):
                 "summary": doc.split("\n")[0] if doc else "",
                 "doc": doc,
             }
-        self.sendString(package_message(json.dumps(result)))
+        return package_message(json.dumps(result))

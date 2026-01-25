@@ -215,9 +215,9 @@ class TEMServer(MicroscopeServer):
 
     
     def connect_to_autoscript(self):
-        ip = "127.0.0.1"
-        # ip = "10.46.217.241"
-        self.microscope.connect(ip, port = 9095)
+        ip = os.getenv("MICROSCOPE_AUTOSCRIPT_IP", "127.0.0.1")
+        port = int(os.getenv("MICROSCOPE_AUTOSCRIPT_PORT", 9095))
+        self.microscope.connect(ip, port=port)
 
     def aberration_correction(self, order, **args):
         """Perform aberration correction"""
@@ -234,11 +234,18 @@ class TEMServer(MicroscopeServer):
 
 
 
-def main(host = "10.46.217.241", port = 9093):
+def main(host=None, port=None):
     """Main function to start the server"""
+    # Use arguments if provided, else environment variables, else defaults
+    if host is None:
+        host = sys.argv[1] if len(sys.argv) > 1 else os.getenv("MICROSCOPE_SERVER_HOST", "127.0.0.1")
+    if port is None:
+        port = int(sys.argv[2]) if len(sys.argv) > 2 else int(os.getenv("MICROSCOPE_SERVER_PORT", 9093))
+
     daemon = Pyro5.api.Daemon(host=host, port=port)
     uri = daemon.register(TEMServer, objectId="tem.server")
     print("Server is ready. Object uri =", uri)
+    sys.stdout.flush()
     daemon.requestLoop()
 
 if __name__ == "__main__":

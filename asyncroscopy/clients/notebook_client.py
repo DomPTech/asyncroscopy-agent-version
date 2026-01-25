@@ -56,8 +56,12 @@ class NotebookClient:
                 resp_len = struct.unpack("!I", resp_hdr)[0]
                 # Receive payload
                 data = self._recv_exact(sock, resp_len)
+                print(f"[DEBUG CLIENT] Received {len(data)} bytes: {data[:100]}")
                 dtype, shape, payload = unpackage_message(data)
+                print(f"[DEBUG CLIENT] Unpacked: dtype={dtype}, type(payload)={type(payload)}")
 
+                # If it's a string (e.g. error or status), return just the string.
+                # If it's a numeric type (numpy array), it's already reshaped by unpackage_message.
                 return payload
 
         except (ConnectionRefusedError, socket.timeout):

@@ -95,7 +95,7 @@ class ASProtocol(ExecutionProtocol):
         self.factory.microscope = 'Debugging'
         self.factory.status = "Ready"
         msg = "Connected to Digital Twin microscope."
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def load_sample(self, args: dict):
         """Load a crystal structure from a CIF file"""
@@ -136,7 +136,7 @@ class ASProtocol(ExecutionProtocol):
         self.factory.beam_position = (self.factory.fov / 2, self.factory.fov / 2)
         
         msg = f"Loaded sample with {len(xtal)} atoms. Dose map initialized."
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def place_beam(self, args: dict):
         """Move the beam to a specific position (x, y in normalized coordinates 0-1)"""
@@ -151,18 +151,18 @@ class ASProtocol(ExecutionProtocol):
             y_ang = y * self.factory.fov
             msg = f"Beam positioned at ({x:.3f}, {y:.3f}) normalized = ({x_ang:.2f}, {y_ang:.2f}) Å"
             self.log.info(f"[AS] {msg}")
-            self.sendString(package_message(msg))
+            return package_message(msg)
         else:
             msg = f"Error: Position ({x}, {y}) outside normalized range (0-1)"
             self.log.error(f"[AS] {msg}")
-            self.sendString(package_message(msg))
+            return package_message(msg)
 
     def blank_beam(self, args=None):
         """Blank the electron beam (stop dose accumulation)"""
         self.factory.beam_blanked = True
         msg = "Beam blanked"
         self.log.info(f"[AS] {msg}")
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def unblank_beam(self, args: dict):
         """Unblank the electron beam and start dose accumulation"""
@@ -177,7 +177,7 @@ class ASProtocol(ExecutionProtocol):
             self._apply_beam_dose(duration)
             msg += f" for {duration}s. Damage applied."
         
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def set_beam_current(self, args: dict):
         """Set the beam current in pA"""
@@ -185,7 +185,7 @@ class ASProtocol(ExecutionProtocol):
         self.factory.beam_current = current
         msg = f"Beam current set to {current} pA"
         self.log.info(f"[AS] {msg}")
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def set_fov(self, args: dict):
         """Set the field of view in angstroms"""
@@ -207,7 +207,7 @@ class ASProtocol(ExecutionProtocol):
             msg = f"FOV set to {fov} Å"
         
         self.log.info(f"[AS] {msg}")
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def _apply_beam_dose(self, duration):
         """Apply electron dose to the dose map using the real probe"""
@@ -358,10 +358,10 @@ class ASProtocol(ExecutionProtocol):
         """Return the current accumulated dose map"""
         if self.factory.dose_map is None:
             msg = "No dose map available. Load a sample first."
-            self.sendString(package_message(msg))
+            return package_message(msg)
         else:
             dose_map = np.array(self.factory.dose_map, dtype=np.float32)
-            self.sendString(package_message(dose_map))
+            return package_message(dose_map)
 
     def get_atom_count(self, args=None):
         """Return the current number of atoms in the sample"""
@@ -372,7 +372,7 @@ class ASProtocol(ExecutionProtocol):
         
         msg = f"Current atom count: {count}"
         self.log.info(f"[AS] {msg}")
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def reset_sample(self, args=None):
         """Reset the sample to original state and clear dose map"""
@@ -380,7 +380,7 @@ class ASProtocol(ExecutionProtocol):
         self.load_sample({})
         msg = "Sample and dose map reset to initial state"
         self.log.info(f"[AS] {msg}")
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
     def get_scanned_image(self, args: dict):
         """Return a scanned image using the indicated detector"""
@@ -390,58 +390,73 @@ class ASProtocol(ExecutionProtocol):
         size = int(size)
         dwell_time = float(dwell_time)
 
-        if dwell_time * size * size > 600:  # frame time > 10 minutes
-            self.log.info(f"[AS] Error: Acquisition too long: {dwell_time*size*size} seconds")
-            return None
-        else:
-            self.log.info(f"[AS] Acquiring image with detector '{scanning_detector}', size={size}, dwell_time={dwell_time}s")
-            self.factory.status = "Busy"
+        try:
+            if dwell_time * size * size > 600:  # frame time > 10 minutes
+                self.log.info(f"[AS] Error: Acquisition too long: {dwell_time*size*size} seconds")
+                return package_message(f"Error: Acquisition too long")
+            else:
+                self.log.info(f"[AS] Acquiring image with detector '{scanning_detector}', size={size}, dwell_time={dwell_time}s")
+                self.factory.status = "Busy"
 
-            # Get probe
-            tem = NotebookClient.connect(host='localhost', port=9000)
-            ab = tem.send_command(destination='Ceos', command='getAberrations', args={})
-            ab = ast.literal_eval(ab)
-            ab['acceleration_voltage'] = self.factory.acceleration_voltage
-            fov = self.factory.fov
-            ab['FOV'] = fov / 12
-            ab['convergence_angle'] = 30  # mrad
-            ab['wavelength'] = it.get_wavelength(ab['acceleration_voltage'])
+                # Get probe
+                tem = NotebookClient.connect(host='localhost', port=9000)
+                if tem is None:
+                    return package_message("Error: AS server could not connect to Central for probe")
+                
+                ab_resp = tem.send_command(destination='Ceos', command='getAberrations', args={})
+                print(f"[AS DEBUG] getAberrations raw resp: {ab_resp}")
+                
+                # Check for error in response
+                if isinstance(ab_resp, str) and ("ERROR" in ab_resp or "failed" in ab_resp.lower()):
+                     raise ValueError(f"Failed to get aberrations: {ab_resp}")
 
-            # Use current atoms state (with damage applied)
-            if self.factory.atoms is None:
-                self.log.warning("[AS] No sample loaded. Loading default...")
-                self.load_sample({})
-            
-            xtal = self.factory.atoms
-            positions = xtal.get_positions()[:, :2]
-            pixel_size = self.factory.pixel_size
-            frame = (0, fov, 0, fov)
-            
-            # Generate image from current atom configuration
-            potential = dg.create_pseudo_potential(xtal, pixel_size, sigma=1, bounds=frame, atom_frame=11)
-            probe = dg.get_probe(ab, potential)
-            image = dg.convolve_kernel(potential, probe)
-            noisy_image = dg.lowfreq_noise(image, noise_level=0.5, freq_scale=.04)
+                ab = ast.literal_eval(ab_resp) if isinstance(ab_resp, str) else ab_resp
+                ab['acceleration_voltage'] = self.factory.acceleration_voltage
+                fov = self.factory.fov
+                ab['FOV'] = fov / 12
+                ab['convergence_angle'] = 30  # mrad
+                ab['wavelength'] = it.get_wavelength(ab['acceleration_voltage'])
 
-            scan_time = dwell_time * size * size
-            counts = scan_time * (self.factory.beam_current * 1e-12) / (1.602e-19)
-            sim_im = dg.poisson_noise(noisy_image, counts=counts)
+                # Use current atoms state (with damage applied)
+                if self.factory.atoms is None:
+                    self.log.warning("[AS] No sample loaded. Loading default...")
+                    self.load_sample({})
+                
+                xtal = self.factory.atoms
+                pixel_size = self.factory.pixel_size
+                frame = (0, fov, 0, fov)
+                
+                # Generate image from current atom configuration
+                potential = dg.create_pseudo_potential(xtal, pixel_size, sigma=1, bounds=frame, atom_frame=11)
+                probe = dg.get_probe(ab, potential)
+                image = dg.convolve_kernel(potential, probe)
+                noisy_image = dg.lowfreq_noise(image, noise_level=0.5, freq_scale=.04)
 
-            # Apply dose during scan
-            self.factory.dose_map += dwell_time * (self.factory.beam_current * 1e-12) / (1.602e-19)
-            delta_dose = np.zeros_like(self.factory.dose_map) + dwell_time * (self.factory.beam_current * 1e-12) / (1.602e-19)
-            self._apply_damage_model(dose_map=delta_dose)
+                scan_time = dwell_time * size * size
+                counts = scan_time * (self.factory.beam_current * 1e-12) / (1.602e-19)
+                sim_im = dg.poisson_noise(noisy_image, counts=counts)
 
-            image = np.array(sim_im, dtype=np.float32)
-            self.factory.status = "Ready"
-            self.sendString(package_message(image))
+                # Apply dose during scan
+                self.factory.dose_map += dwell_time * (self.factory.beam_current * 1e-12) / (1.602e-19)
+                delta_dose = np.zeros_like(self.factory.dose_map) + dwell_time * (self.factory.beam_current * 1e-12) / (1.602e-19)
+                self._apply_damage_model(dose_map=delta_dose)
+
+                image = np.array(sim_im, dtype=np.float32)
+                self.factory.status = "Ready"
+                print(f"[AS DEBUG] Successfully generated image: {image.shape}")
+                return package_message(image)
+        except Exception as e:
+            import traceback
+            err = traceback.format_exc()
+            print(f"[AS DEBUG] CRITICAL ERROR in get_scanned_image: {err}")
+            return package_message(f"AS server error: {e}\n{err}")
 
 
     def get_stage(self, args=None):
         """Return current stage position (placeholder)"""
         positions = [np.random.uniform(-10, 10) for _ in range(5)]
         positions = np.array(positions, dtype=np.float32)
-        self.sendString(package_message(positions))
+        return package_message(positions)
 
     def get_status(self, args=None):
         """Return the server status"""
@@ -451,11 +466,12 @@ class ASProtocol(ExecutionProtocol):
             msg = f"Microscope is {self.factory.status}. Beam: {beam_status}. Atoms: {atom_count}"
         else:
             msg = f"Microscope is {self.factory.status}. Beam: {beam_status}. No sample loaded."
-        self.sendString(package_message(msg))
+        return package_message(msg)
 
 
 if __name__ == "__main__":
-    port = 9001
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 9001
     print(f"[AS] Server running on port {port}...")
     reactor.listenTCP(port, ASFactory())
     reactor.run()

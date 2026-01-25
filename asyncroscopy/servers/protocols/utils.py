@@ -57,9 +57,11 @@ def unpackage_message(packet: bytes):
     payload_data is bytes for binary dtypes, or decoded string for 'str', or numpy array for numeric types.
     """
     try:
+        print(f"[DEBUG UNPACK] packet len: {len(packet)} prefix: {packet[:100]}")
         end_idx = packet.index(b']') + 1
         header = packet[:end_idx].decode("ascii")
         payload = packet[end_idx:]
+        print(f"[DEBUG UNPACK] header: {header}")
         parts = header[1:-1].split(",")
         dtype, *shape_parts = parts
         shape = tuple(int(x) for x in shape_parts) if shape_parts else ()

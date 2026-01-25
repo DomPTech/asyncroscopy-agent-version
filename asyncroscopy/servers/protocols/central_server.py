@@ -125,24 +125,23 @@ class CentralProtocol(Int32StringReceiver):
         cmd_name = parts[0]
         if cmd_name == "Central_set_routing_table":
             try:
-                # Re-assemble split tokens like  AS=('127.0.0.1', 9001)
-                cleaned, buf = [], []
-                for tok in parts[1:]:
-                    buf.append(tok)
-                    if tok.endswith(")"):
-                        cleaned.append(" ".join(buf))
-                        buf = []
-
-                routing_table = {}
-                for item in cleaned:
-                    k, v = item.split("=", 1)
-                    inner = v.strip()[1:-1]                     # remove ( )
-                    host_part, port_part = inner.split(",", 1)
-                    host = host_part.strip().strip("'\"")
-                    port = int(port_part.strip())
-                    routing_table[k.strip()] = (host, port)
+                # Re-assemble the argument part of the message
+                arg_str = msg[len("Central_set_routing_table"):].strip()
+                
+                # Effort 1: Try parsing as pure JSON
+                try:
+                    routing_table = json.loads(arg_str)
+                    # Normalize list values to tuples
+                    for k in routing_table:
+                        v = routing_table[k]
+                        if isinstance(v, list):
+                            routing_table[k] = tuple(v)
+                except json.JSONDecodeError:
+                    # Effort 2: Fallback to legacy space-split parsing if it's not JSON
+                    routing_table = self._parse_routing_table(parts[1:])
 
                 self.set_routing_table(routing_table)
+                print(f"[DEBUG] Central routing table updated: {self.routing_table}")
                 self.sendString(package_message("[Central] Routing table updated"))
             except Exception as e:
                 log.exception("Failed to set routing table")
