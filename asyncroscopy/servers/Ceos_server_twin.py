@@ -80,7 +80,8 @@ class CeosProtocol(ExecutionProtocol):
         return package_message(msg)
 
 if __name__ == "__main__":
-    port = 9003
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 9003
     print(f"[Ceos] Server running on port {port}...")
     reactor.listenTCP(port, CeosFactory())
     reactor.run()

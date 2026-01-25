@@ -12,8 +12,8 @@ import sys
 from asyncroscopy.servers.protocols.execution_protocol import ExecutionProtocol
 from asyncroscopy.servers.protocols.utils import package_message, unpackage_message
 # sys.path.insert(0, "C:\\AE_future\\autoscript_1_14\\")
-sys.path.insert(0, "/Users/austin/Desktop/Projects/autoscript_tem_microscope_client")
-import autoscript_tem_microscope_client as auto_script
+#sys.path.insert(0, "/Users/austin/Desktop/Projects/autoscript_tem_microscope_client")
+#import autoscript_tem_microscope_client as auto_script
 
 
 # FACTORY — holds shared state (persistent across all connections)
@@ -60,7 +60,7 @@ class ASProtocol(ExecutionProtocol):
 
         size = int(size)
         dwell_time = float(dwell_time)
-        if dwell_time * size * size > 600: # frame time > 10 minutes
+        if dwell_time * size * size > 600:
             print(f"[AS] Error: Acquisition too long: {dwell_time*size*size} seconds")
             return None
         else:
@@ -76,6 +76,12 @@ class ASProtocol(ExecutionProtocol):
         positions = np.array(positions, dtype=np.float32)
         self.sendString(package_message(positions))
 
+    def set_magnification(self, args: dict):
+        """Set magnification (placeholder for twin)"""
+        value = args.get('value', 1000.0)
+        msg = f"Magnification set to {value}x (simulated)"
+        self.sendString(package_message(msg))
+
     def get_status(self, args=None):
         """Return the server status"""
         msg = f"Microscope is {self.factory.status}"
@@ -83,7 +89,7 @@ class ASProtocol(ExecutionProtocol):
 
 
 if __name__ == "__main__":
-    port = 9001
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 9001
     print(f"[AS] Server running on port {port}...")
     reactor.listenTCP(port, ASFactory())
     reactor.run()

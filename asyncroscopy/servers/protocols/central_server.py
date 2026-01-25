@@ -269,7 +269,9 @@ class CentralFactory(Factory):
 
 # ---------- Run server ----------
 if __name__ == "__main__":
-    log.info("Central server running on port 9000...")
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 9000
+    log.info(f"Central server running on port {port}...")
     factory = CentralFactory(routing_table=DEFAULT_ROUTING_TABLE)
-    reactor.listenTCP(9000, factory)
+    reactor.listenTCP(port, factory)
     reactor.run()
