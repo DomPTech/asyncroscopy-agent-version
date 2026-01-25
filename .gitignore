@@ -224,3 +224,5 @@ AS_1.14_wheels/
 
 *.png
 *.npz
+
+.DS_Store
