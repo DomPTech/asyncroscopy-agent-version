@@ -266,7 +266,9 @@ class CentralFactory(Factory):
         self.protocol = CentralProtocol
 
     def buildProtocol(self, addr):
-        return self.protocol(routing_table=self.routing_table)
+        p = self.protocol(routing_table=self.routing_table)
+        p.factory = self
+        return p
 
 # ---------- Run server ----------
 if __name__ == "__main__":
