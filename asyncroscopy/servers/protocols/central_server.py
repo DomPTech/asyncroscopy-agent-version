@@ -77,7 +77,7 @@ class CentralProtocol(Int32StringReceiver):
         log.info("[Central] Connection made from %s", peer)
 
     def connectionLost(self, reason):
-        log.info("[Central] Connection lost: %s", reason)
+        log.info("[Central] Connection ended") # : %s", reason
 
     def stringReceived(self, data: bytes):
         """Main entry point for incoming client/backend messages."""
@@ -139,7 +139,6 @@ class CentralProtocol(Int32StringReceiver):
                 except json.JSONDecodeError:
                     # Effort 2: Fallback to legacy space-split parsing if it's not JSON
                     routing_table = self._parse_routing_table(parts[1:])
-
                 self.set_routing_table(routing_table)
                 print(f"[DEBUG] Central routing table updated: {self.routing_table}")
                 self.sendString(package_message("[Central] Routing table updated"))
@@ -197,6 +196,8 @@ class CentralProtocol(Int32StringReceiver):
 
     def set_routing_table(self, routing_table: Dict[str, Tuple[str,int]]):
         self.routing_table = routing_table
+        if hasattr(self, 'factory') and self.factory:
+            self.factory.routing_table = routing_table
         log.info("Routing table updated: %s", self.routing_table)
 
     # ----- connection/send helpers -----
