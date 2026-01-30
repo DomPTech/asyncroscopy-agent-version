@@ -23,7 +23,7 @@ log = logging.getLogger("central")
 
 # ---------- Defaults ----------
 DEFAULT_ROUTING_TABLE = {
-    "AS": ("localhost", 9001),
+    "AS": ("10.46.217.241", 9091),
     "Gatan": ("localhost", 9002),
     "Ceos": ("localhost", 9003),
     "Preacquired_AS": ("localhost", 9004),
