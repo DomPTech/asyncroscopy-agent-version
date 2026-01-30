@@ -9,10 +9,15 @@ import numpy as np
 import time
 import sys
 
+import os
 from asyncroscopy.servers.protocols.execution_protocol import ExecutionProtocol
 from asyncroscopy.servers.protocols.utils import package_message, unpackage_message
-# sys.path.insert(0, "C:\\AE_future\\autoscript_1_14\\")
-sys.path.insert(0, "/Users/austin/Desktop/Projects/autoscript_tem_microscope_client")
+
+# Use AUTOSCRIPT_PATH from environment if provided, otherwise fallback to default
+autoscript_path = os.environ.get("AUTOSCRIPT_PATH", "/Users/austin/Desktop/Projects/autoscript_tem_microscope_client")
+if autoscript_path:
+    sys.path.insert(0, autoscript_path)
+
 import autoscript_tem_microscope_client as auto_script
 
 
