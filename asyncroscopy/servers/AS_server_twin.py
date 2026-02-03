@@ -87,6 +87,38 @@ class ASProtocol(ExecutionProtocol):
         msg = f"Microscope is {self.factory.status}"
         self.sendString(package_message(msg))
 
+    def calibrate_screen_current(self, args=None):
+        """Mock calibration"""
+        msg = "Screen current calibrated (simulated)"
+        self.sendString(package_message(msg))
+
+    def set_current(self, args: dict):
+        """Mock set current"""
+        current = args.get("current", 0)
+        msg = f"Current set to {current} pA (simulated)"
+        self.sendString(package_message(msg))
+
+    def place_beam(self, args: dict):
+        """Mock place beam"""
+        x = args.get("x", 0.5)
+        y = args.get("y", 0.5)
+        msg = f"Beam moved to {x}, {y} (simulated)"
+        self.sendString(package_message(msg))
+
+    def blank_beam(self, args=None):
+        """Mock blank beam"""
+        msg = "Beam blanked (simulated)"
+        self.sendString(package_message(msg))
+
+    def unblank_beam(self, args: dict):
+        """Mock unblank beam"""
+        duration = args.get("duration")
+        if duration:
+            msg = f"Beam unblanked for {duration}s (simulated)"
+        else:
+            msg = "Beam unblanked (simulated)"
+        self.sendString(package_message(msg))
+
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 9001
