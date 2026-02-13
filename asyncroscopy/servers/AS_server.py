@@ -225,6 +225,22 @@ class ASProtocol(ExecutionProtocol):
         msg = f"Microscope is {self.factory.status}"
         self.sendString(package_message(msg))
 
+    def get_state(self, args: dict = None):
+        """Return the full microscope state as a dictionary"""
+        mic = self.factory.microscope
+        try:
+            state = {
+                "status": self.factory.status,
+                "beam_blanked": mic.optics.blanker.is_blanked,
+                "stage_position": list(mic.specimen.stage.position),
+                "magnification": mic.optics.magnification.value,
+            }
+            # Add more fields as needed
+        except Exception as e:
+            state = {"status": self.factory.status, "error": str(e)}
+            
+        self.sendString(package_message(state))
+
 
 if __name__ == "__main__":
     port = 9001

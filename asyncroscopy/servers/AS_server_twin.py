@@ -23,6 +23,9 @@ class ASFactory(protocol.Factory):
         self.microscope = None
         self.detectors = {}
         self.status = "Offline"
+        self.stage_position = np.array([0, 0, 0, 0, 0], dtype=np.float32)
+        self.magnification = 1000.0
+        self.beam_blanked = True
 
     def buildProtocol(self, addr):
         """Create a new protocol instance and attach the factory (shared state)."""
@@ -71,14 +74,13 @@ class ASProtocol(ExecutionProtocol):
             self.sendString(package_message(image))
 
     def get_stage(self, args=None):
-        """Return current stage position (placeholder)"""
-        positions = [np.random.uniform(-10, 10) for _ in range(5)]
-        positions = np.array(positions, dtype=np.float32)
-        self.sendString(package_message(positions))
+        """Return current stage position"""
+        self.sendString(package_message(self.factory.stage_position))
 
     def set_magnification(self, args: dict):
         """Set magnification (placeholder for twin)"""
         value = args.get('value', 1000.0)
+        self.factory.magnification = float(value)
         msg = f"Magnification set to {value}x (simulated)"
         self.sendString(package_message(msg))
 
@@ -86,6 +88,18 @@ class ASProtocol(ExecutionProtocol):
         """Return the server status"""
         msg = f"Microscope is {self.factory.status}"
         self.sendString(package_message(msg))
+
+    def get_state(self, args=None):
+        """Return the full microscope state as a dictionary"""
+        state = {
+            "status": self.factory.status,
+            "stage_x": float(self.factory.stage_position[0]),
+            "stage_y": float(self.factory.stage_position[1]),
+            "stage_z": float(self.factory.stage_position[2]),
+            "magnification": self.factory.magnification,
+            "beam_blanked": self.factory.beam_blanked
+        }
+        self.sendString(package_message(state))
 
     def calibrate_screen_current(self, args=None):
         """Mock calibration"""
@@ -107,14 +121,17 @@ class ASProtocol(ExecutionProtocol):
 
     def blank_beam(self, args=None):
         """Mock blank beam"""
+        self.factory.beam_blanked = True
         msg = "Beam blanked (simulated)"
         self.sendString(package_message(msg))
 
     def unblank_beam(self, args: dict):
         """Mock unblank beam"""
         duration = args.get("duration")
+        self.factory.beam_blanked = False
         if duration:
             msg = f"Beam unblanked for {duration}s (simulated)"
+            # Note: In a real twisted server we'd use reactor.callLater to re-blank
         else:
             msg = "Beam unblanked (simulated)"
         self.sendString(package_message(msg))

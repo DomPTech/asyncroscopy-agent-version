@@ -17,6 +17,13 @@ def package_message(data) -> bytes:
       - list/tuple -> converted to numpy array
       - fallback: str(data)
     """
+    # Dictionaries -> JSON
+    if isinstance(data, dict):
+        import json
+        txt = json.dumps(data).encode("utf-8")
+        header = f"[json,{len(txt)}]".encode("ascii")
+        return header + txt
+
     # Strings
     if isinstance(data, str):
         enc = data.encode("utf-8")
@@ -70,6 +77,9 @@ def unpackage_message(packet: bytes):
         return "bytes", (), packet
     if dtype == "str":
         return dtype, shape, payload.decode("utf-8")
+    if dtype == "json":
+        import json
+        return dtype, shape, json.loads(payload.decode("utf-8"))
     if dtype == "uint8":
         arr = np.frombuffer(payload, dtype=np.uint8)
         if shape:
