@@ -26,6 +26,8 @@ class ASFactory(protocol.Factory):
         self.stage_position = np.array([0, 0, 0, 0, 0], dtype=np.float32)
         self.magnification = 1000.0
         self.beam_blanked = True
+        self.column_valve_open = False
+        self.optics_mode = "TEM"
 
     def buildProtocol(self, addr):
         """Create a new protocol instance and attach the factory (shared state)."""
@@ -97,7 +99,9 @@ class ASProtocol(ExecutionProtocol):
             "stage_y": float(self.factory.stage_position[1]),
             "stage_z": float(self.factory.stage_position[2]),
             "magnification": self.factory.magnification,
-            "beam_blanked": self.factory.beam_blanked
+            "beam_blanked": self.factory.beam_blanked,
+            "column_valve_open": self.factory.column_valve_open,
+            "optics_mode": self.factory.optics_mode
         }
         self.sendString(package_message(state))
 
@@ -134,6 +138,22 @@ class ASProtocol(ExecutionProtocol):
             # Note: In a real twisted server we'd use reactor.callLater to re-blank
         else:
             msg = "Beam unblanked (simulated)"
+        self.sendString(package_message(msg))
+
+    def set_microscope_status(self, args: dict):
+        """Set microscope status (valves, optics mode)"""
+        parameter = args.get("parameter")
+        value = args.get("value")
+        
+        if parameter == 'column_valve':
+            self.factory.column_valve_open = (value == 'open')
+            msg = f"Column valve {value} (simulated)"
+        elif parameter == 'optics_mode':
+            self.factory.optics_mode = value
+            msg = f"Optics mode set to {value} (simulated)"
+        else:
+            msg = f"Parameter {parameter} not recognized (simulated)"
+            
         self.sendString(package_message(msg))
 
 

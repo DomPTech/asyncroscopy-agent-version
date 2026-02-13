@@ -193,6 +193,30 @@ class ASProtocol(ExecutionProtocol):
         self.log.info(f"[AS] {msg}")
         self.sendString(package_message(msg))
 
+    def set_microscope_status(self, args: dict):
+        """Set microscope status (valves, optics mode)"""
+        parameter = args.get("parameter")
+        value = args.get("value")
+        mic = self.factory.microscope
+
+        if parameter == 'column_valve':
+            if value == 'open':
+                mic.vacuum.column_valves.open()
+            else:
+                mic.vacuum.column_valves.close()
+            msg = f"Column valve set to {value}"
+        elif parameter == 'optics_mode':
+            if value == 'TEM':
+                mic.optics.optical_mode = auto_script.enumerations.OpticalMode.TEM
+            elif value == 'STEM':
+                mic.optics.optical_mode = auto_script.enumerations.OpticalMode.STEM
+            msg = f"Optics mode set to {value}"
+        else:
+            msg = f"Parameter {parameter} not recognized"
+            
+        self.log.info(f"[AS] {msg}")
+        self.sendString(package_message(msg))
+
     def get_scanned_image(self, args: dict):
         """Return a scanned image using the indicated detector"""
         scanning_detector = args.get('scanning_detector')
@@ -234,6 +258,8 @@ class ASProtocol(ExecutionProtocol):
                 "beam_blanked": mic.optics.blanker.is_blanked,
                 "stage_position": list(mic.specimen.stage.position),
                 "magnification": mic.optics.magnification.value,
+                "column_valve_open": mic.vacuum.column_valves.state == auto_script.enumerations.ColumnValveState.OPEN,
+                "optics_mode": str(mic.optics.optical_mode)
             }
             # Add more fields as needed
         except Exception as e:
