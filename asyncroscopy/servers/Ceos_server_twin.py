@@ -55,6 +55,22 @@ class CeosProtocol(ExecutionProtocol):
         msg = 'Aberrations Loaded'
         return package_message(msg)
     
+    def acquireTableau(self, args_dict: dict):
+        """Mock acquireTableau returning a dictionary of aberrations."""
+        # Realistic mock aberrations for pyTEMlib
+        aberrations = {
+            'acceleration_voltage': 200e3,
+            'convergence_angle': 30.0,
+            'FOV': 10.0,
+            'C1': 0.0, 'A1': [0.0, 0.0],
+            'B2': [0.0, 0.0], 'A2': [0.0, 0.0],
+            'C3': 1e6, 'S3': [0.0, 0.0], 'A3': [0.0, 0.0],
+            'C10': 0.0, 'C12a': 0.0, 'C12b': 0.0,
+            'C30': 1e6, 'Cc': 1.3e6
+        }
+        return package_message(aberrations)
+
+
     def runTableau(self, args_dict):
         """Run a tableau acquisition."""
         # args = {"tabType": 'Fast', "angle": 18}

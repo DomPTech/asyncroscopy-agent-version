@@ -129,7 +129,7 @@ class ASProtocol(ExecutionProtocol):
 # ---------------------------
 
 
-    def set_current(self, args:dict):
+    def set_beam_current(self, args:dict):
         """
         set screen current (via gun lens)
         must have screen current calibrated

@@ -80,12 +80,12 @@ class ASProtocol(ExecutionProtocol):
         msg = "Connected to Digital Twin microscope."
         self.sendString(package_message(msg))
 
-    def set_current(self, args: dict):
+    def set_beam_current(self, args: dict):
         """Set the beam current (pA)"""
-        beam_current = args.get('beam_current')
-        self.factory.beam_current = float(beam_current)
-        self.log.info(f"[AS] Beam current set to {beam_current} pA")
-        msg = f"Beam current set to {beam_current} pA"
+        current = args.get('current')
+        self.factory.beam_current = float(current)
+        self.log.info(f"[AS] Beam current set to {current} pA")
+        msg = f"Beam current set to {current} pA"
         self.sendString(package_message(msg))
 
     def get_scanned_image(self, args: dict):

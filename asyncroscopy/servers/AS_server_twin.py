@@ -110,7 +110,7 @@ class ASProtocol(ExecutionProtocol):
         msg = "Screen current calibrated (simulated)"
         self.sendString(package_message(msg))
 
-    def set_current(self, args: dict):
+    def set_beam_current(self, args: dict):
         """Mock set current"""
         current = args.get("current", 0)
         msg = f"Current set to {current} pA (simulated)"
@@ -127,6 +127,11 @@ class ASProtocol(ExecutionProtocol):
         """Mock blank beam"""
         self.factory.beam_blanked = True
         msg = "Beam blanked (simulated)"
+        self.sendString(package_message(msg))
+
+    def tune_C1A1(self, args=None):
+        """Mock tune_C1A1"""
+        msg = "C1A1 tuned (simulated)"
         self.sendString(package_message(msg))
 
     def unblank_beam(self, args: dict):
@@ -156,6 +161,11 @@ class ASProtocol(ExecutionProtocol):
             
         self.sendString(package_message(msg))
 
+    def get_atom_count(self, args=None):
+        """Mock get_atom_count"""
+        count = 3600 # Matching user's notebook example
+        msg = f"Current atom count: {count}"
+        self.sendString(package_message(msg))
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 9001
