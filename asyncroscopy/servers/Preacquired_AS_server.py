@@ -15,7 +15,10 @@ import json, struct
 from asyncroscopy.servers.protocols.execution_protocol import ExecutionProtocol
 # sys.path.insert(0, "C:\\AE_future\\autoscript_1_14\\")
 sys.path.insert(0, "/Users/austin/Desktop/Projects/autoscript_tem_microscope_client")
-import autoscript_tem_microscope_client as auto_script
+try:
+    import autoscript_tem_microscope_client as auto_script
+except ImportError:
+    auto_script = None
 
 
 # FACTORY — holds shared state (persistent across all connections)

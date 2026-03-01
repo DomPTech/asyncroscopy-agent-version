@@ -6,12 +6,6 @@ readme = "README.md"
 requires-python = ">3.11"
 
 dependencies = [
-    # AutoScript / Thermo Fisher wheels — resolved from AS_1.15_wheels/
-    "autoscript-core",
-    "autoscript-tem-microscope-client",
-    "autoscript-tem-microscope-client-tests",
-    "autoscript-tem-toolkit",
-    "thermoscientific-logging",
     # Other project dependencies
     "colorama>=0.4.6",
     "ipykernel>=7.1.0",
@@ -25,6 +19,15 @@ dependencies = [
     "pyTEMlib>=0.2025.11.4",
     "botorch==0.12.0",
     "pre-commit>=4.5.0",
+]
+
+[project.optional-dependencies]
+autoscript = [
+    "autoscript-core",
+    "autoscript-tem-microscope-client",
+    "autoscript-tem-microscope-client-tests",
+    "autoscript-tem-toolkit",
+    "thermoscientific-logging",
 ]
 
 [tool.setuptools]
