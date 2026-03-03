@@ -11,7 +11,10 @@ import Pyro5.api
 
 
 sys.path.insert(0, "C:\\AE_future\\autoscript_1_14\\")
-import autoscript_tem_microscope_client as auto_script
+try:
+    import autoscript_tem_microscope_client as auto_script
+except ImportError:
+    auto_script = None
 
 os.environ["PYRO_LOGLEVEL"] = "DEBUG"
 

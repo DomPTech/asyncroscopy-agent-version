@@ -39,7 +39,10 @@ import pyTEMlib.image_tools as it
 from twisted.internet import reactor, protocol
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
-import autoscript_tem_microscope_client as auto_script
+try:
+    import autoscript_tem_microscope_client as auto_script
+except ImportError:
+    auto_script = None
 
 
 # FACTORY — holds shared state (persistent across all connections)
