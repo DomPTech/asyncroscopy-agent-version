@@ -259,13 +259,14 @@ class Microscope(Device, metaclass=CombinedMeta):
     # ------------------------------------------------------------------
     # Internal acquisition helpers
     # ------------------------------------------------------------------
-    
+    @abstractmethod
     def _acquire_stem_image():
-        # define in the inherit class
+        print("Get image")
         pass
 
+    @abstractmethod
     def _acquire_stem_image_advanced():
-        # define in the inherit class
+        print("Get image with more flexible settings")
         pass
 
 
