@@ -20,7 +20,7 @@ Client-side reconstruction example::
 
 import json
 import time
-from typing import Optional
+from typing import Any, Optional
 
 from abc import abstractmethod, ABC, ABCMeta
 
@@ -263,6 +263,21 @@ class Microscope(Device, metaclass=CombinedMeta):
         """
         self._unblank_beam()
 
+    @command(dtype_in=str, dtype_out=DevEncoded)
+    def acquire_eds(self, settings_json: str = "") -> tuple[str, bytes]:
+        """Acquire an EDS spectrum and return encoded metadata plus raw bytes."""
+        spectrum, metadata = self._acquire_eds_data(settings_json)
+        if not isinstance(spectrum, np.ndarray):
+            spectrum = np.array(spectrum, dtype=np.uint32)
+
+        encoded_metadata = {
+            "dtype": str(spectrum.dtype),
+            "shape": list(spectrum.shape),
+            "timestamp": time.time(),
+            **metadata,
+        }
+        return json.dumps(encoded_metadata), spectrum.tobytes()
+
 
     # ------------------------------------------------------------------
     # Internal acquisition helpers
@@ -275,6 +290,11 @@ class Microscope(Device, metaclass=CombinedMeta):
     @abstractmethod
     def _acquire_stem_image_advanced():
         print("Get image with more flexible settings")
+        pass
+
+    @abstractmethod
+    def _acquire_eds_data(self, settings_json: str) -> tuple[np.ndarray, dict[str, Any]]:
+        print("Acquire EDS spectrum")
         pass
 
     def _place_beam():

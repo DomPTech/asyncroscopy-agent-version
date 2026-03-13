@@ -25,8 +25,9 @@ Client-side reconstruction example::
 """
 
 import json
+import logging
 import time
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import tango
@@ -38,8 +39,8 @@ from tango.server import Device, attribute, command, device_property
 # on a development machine without AutoScript installed.
 try:
     from autoscript_tem_microscope_client import TemMicroscopeClient
-    from autoscript_tem_microscope_client.enumerations import DetectorType, ImageSize
-    from autoscript_tem_microscope_client.structures import Region, Rectangle
+    from autoscript_tem_microscope_client.enumerations import DetectorType, ImageSize, EdsDetectorType, ExposureTimeType
+    from autoscript_tem_microscope_client.structures import Region, Rectangle, EdsAcquisitionSettings, AdornedSpectrum
     from autoscript_tem_microscope_client.enumerations import RegionCoordinateSystem
     from autoscript_tem_microscope_client.structures import StemAcquisitionSettings
     _AUTOSCRIPT_AVAILABLE = True
@@ -47,7 +48,6 @@ except ImportError:
     _AUTOSCRIPT_AVAILABLE = False
 
 print(_AUTOSCRIPT_AVAILABLE)
-
 
 from asyncroscopy.Microscope import Microscope
 
@@ -267,6 +267,74 @@ class ThermoMicroscope(Microscope):
         unblank beam
         """
         self._microscope.optics.blanker.unblank()
+
+    def configure_eds_settings(
+        self,
+        eds_detector_name: str = EdsDetectorType.SUPER_X,
+        dispersion: int = 5,
+        shaping_time: float = 3e-6,
+        exposure_time: float = 2,
+        exposure_time_type: str = ExposureTimeType.LIVE_TIME,
+    ) -> EdsAcquisitionSettings:
+        """Configure the EDS acquisition settings."""
+        settings = EdsAcquisitionSettings()
+        settings.eds_detector = eds_detector_name
+        settings.dispersion = dispersion
+        settings.shaping_time = shaping_time
+        settings.exposure_time = exposure_time
+        settings.exposure_time_type = exposure_time_type
+        return settings
+
+    def _acquire_eds(
+        self, settings: EdsAcquisitionSettings, handle_byte_order: bool = True
+    ) -> Union[np.ndarray, AdornedSpectrum]:
+        """Perform EDS : TODO - make sure byte order issue is taken care from tf side"""
+        if settings == None:
+            settings = self.configure_eds_settings()
+        eds_spectrum = self._microscope.analysis.eds.acquire_spectrum(settings)
+
+        if handle_byte_order == True:
+            dt = np.dtype("uint32").newbyteorder("<")
+            eds_spectrum = np.frombuffer(eds_spectrum._raw_data, dtype=dt)
+
+        return eds_spectrum
+
+    def _acquire_eds_data(self, settings_json: str = "") -> tuple[np.ndarray, dict[str, object]]:
+        """
+        Acquire an EDS spectrum and return the raw spectrum plus metadata.
+
+        Parameters
+        ----------
+        settings_json:
+            Optional JSON string with keys such as `exposure_time`, `dispersion`,
+            and `shaping_time`.
+        """
+        params = {}
+        if settings_json:
+            try:
+                params = json.loads(settings_json)
+            except Exception as exc:
+                tango.Except.throw_exception(
+                    "InvalidEdsSettings",
+                    f"Could not parse EDS settings JSON: {exc}",
+                    "ThermoMicroscope._acquire_eds_data()",
+                )
+
+        settings = self.configure_eds_settings(
+            dispersion=int(params.get("dispersion", 5)),
+            shaping_time=float(params.get("shaping_time", 3e-6)),
+            exposure_time=float(params.get("exposure_time", 2.0)),
+        )
+        spectrum = self._acquire_eds(settings)
+        if not isinstance(spectrum, np.ndarray):
+            spectrum = np.array(spectrum, dtype=np.uint32)
+
+        return spectrum, {
+            "dispersion": settings.dispersion,
+            "shaping_time": settings.shaping_time,
+            "exposure_time": settings.exposure_time,
+        }
+
 # ----------------------------------------------------------------------
 # Server entry point
 # ----------------------------------------------------------------------
