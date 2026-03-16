@@ -73,7 +73,11 @@ class ThermoMicroscope(Microscope):
         default_value=9095,
         doc="Hostname or IP of the AutoScript microscope server",
     )
-
+    simulate_hardware_for_tests = device_property(
+        dtype=bool,
+        default_value=False,
+        doc="If True, skip AutoScript connection and use simulation."
+    )
     # ------------------------------------------------------------------
     # Attributes
     # ------------------------------------------------------------------
@@ -109,6 +113,10 @@ class ThermoMicroscope(Microscope):
 
     def _connect_hardware(self) -> None:
         """Establish AutoScript connection from MPC -> hardware."""
+        if self.simulate_hardware_for_tests:
+            self.warn_stream("Simulation mode: skipping AutoScript connection")
+            self._microscope = None
+            return
         if not _AUTOSCRIPT_AVAILABLE:
             self.warn_stream("AutoScript not available")
             return

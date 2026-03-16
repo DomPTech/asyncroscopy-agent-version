@@ -10,10 +10,6 @@ import json
 import numpy as np
 import pytest
 import tango
-from tango.test_context import MultiDeviceTestContext
-
-from asyncroscopy.detectors.HAADF import HAADF
-from asyncroscopy.ThermoDigitalTwin import ThermoDigitalTwin
 
 # Using shared twin_proxy from conftest.py
 
