@@ -5,10 +5,10 @@ import tango
 
 
 class TestThermoMicroscope:
-    def test_startup_state_is_on(self, thermo_proxy):
+    def test_startup_state_is_on(self, thermo_proxy: tango.DeviceProxy) -> None:
         assert thermo_proxy.state() == tango.DevState.ON
 
-    def test_haadf_defaults_are_visible_through_proxy(self, haadf_proxy):
+    def test_haadf_defaults_are_visible_through_proxy(self, haadf_proxy: tango.DeviceProxy) -> None:
         haadf_proxy.dwell_time = 1e-6
         haadf_proxy.image_width = 1024
         haadf_proxy.image_height = 1024
@@ -19,9 +19,9 @@ class TestThermoMicroscope:
 
     def test_get_image_returns_valid_encoded_data(
         self,
-        thermo_proxy,
-        patched_single_image,
-    ):
+        thermo_proxy: tango.DeviceProxy,
+        patched_single_image: pytest.MonkeyPatch,
+    ) -> None:
         json_meta, raw_bytes = thermo_proxy.get_image("haadf")
         meta = json.loads(json_meta)
 
@@ -37,10 +37,10 @@ class TestThermoMicroscope:
 
     def test_detector_settings_propagate_into_get_image(
         self,
-        thermo_proxy,
-        haadf_proxy,
-        patched_single_image,
-    ):
+        thermo_proxy: tango.DeviceProxy,
+        haadf_proxy: tango.DeviceProxy,
+        patched_single_image: pytest.MonkeyPatch,
+    ) -> None:
         haadf_proxy.dwell_time = 2e-6
         haadf_proxy.image_width = 256
         haadf_proxy.image_height = 512
@@ -57,7 +57,7 @@ class TestThermoMicroscope:
         assert image.shape == (512, 256)
         assert image.dtype == np.uint16
 
-    def test_unknown_detector_raises(self, thermo_proxy, patched_single_image):
+    def test_unknown_detector_raises(self, thermo_proxy: tango.DeviceProxy, patched_single_image: pytest.MonkeyPatch) -> None:
         with pytest.raises(tango.DevFailed) as exc:
             thermo_proxy.get_image("void")
 
@@ -65,11 +65,11 @@ class TestThermoMicroscope:
         err_text = str(exc.value)
         assert "UnknownDetector" in err_text or "No proxy found for detector" in err_text
 
-    def test_disconnect_sets_state_off(self, thermo_proxy):
+    def test_disconnect_sets_state_off(self, thermo_proxy: tango.DeviceProxy) -> None:
         thermo_proxy.Disconnect()
         assert thermo_proxy.state() == tango.DevState.OFF
 
-    def test_connect_restores_state_on(self, thermo_proxy):
+    def test_connect_restores_state_on(self, thermo_proxy: tango.DeviceProxy) -> None:
         thermo_proxy.Disconnect()
         assert thermo_proxy.state() == tango.DevState.OFF
 

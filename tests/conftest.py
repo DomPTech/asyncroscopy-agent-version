@@ -96,12 +96,12 @@ def thermo_proxy(tango_ctx):
 
 
 @pytest.fixture
-def patched_single_image(monkeypatch):
+def patched_single_image(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Patch ThermoMicroscope._acquire_stem_image so get_image() works
     without AutoScript/hardware.
     """
-    def fake_acquire(self, detector_name, image_width, image_height, dwell_time):
+    def fake_acquire(self, detector_name : str, image_width: int, image_height: int, dwell_time: float):
         # Deterministic image makes tests stable
         arr = np.arange(image_height * image_width, dtype=np.uint16)
         return arr.reshape(image_height, image_width)

@@ -160,8 +160,9 @@ class ThermoMicroscope(Microscope):
         return self._manufacturer
 
     # ------------------------------------------------------------------
-    # Commands
+    # Internal acquisition helpers
     # ------------------------------------------------------------------
+    # TODO:if self._microscope is not None: checks should go to init functions than sitting in commands 
 
     def _acquire_stem_image(
         self,
@@ -259,22 +260,25 @@ class ThermoMicroscope(Microscope):
         """
         sets resting beam position, [0:1]
         """
-        x = float(position[0])
-        y = float(position[1])
-        print(x,y)
-        self._microscope.optics.paused_scan_beam_position = [x, y]
+        if self._microscope is not None:
+            x = float(position[0])
+            y = float(position[1])
+            print(x,y)
+            self._microscope.optics.paused_scan_beam_position = [x, y]
 
 
     def _blank_beam(self) -> None:
         """blank beam"""
-        self._microscope.optics.blanker.blank()
+        if self._microscope is not None:
+            self._microscope.optics.blanker.blank()
 
 
     def _unblank_beam(self) -> None:
         """
         unblank beam
         """
-        self._microscope.optics.blanker.unblank()
+        if self._microscope is not None:
+            self._microscope.optics.blanker.unblank()
 # ----------------------------------------------------------------------
 # Server entry point
 # ----------------------------------------------------------------------
