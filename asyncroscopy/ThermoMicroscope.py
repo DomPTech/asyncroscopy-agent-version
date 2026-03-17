@@ -63,13 +63,11 @@ class ThermoMicroscope(Microscope):
     # ------------------------------------------------------------------
     # Device properties — configure in Tango DB per deployment
     # ------------------------------------------------------------------
-
     autoscript_host_ip = device_property(
         dtype=str,
         default_value="10.46.217.241",
         doc="Hostname or IP of the AutoScript microscope server",
     )
-
     autoscript_host_port = device_property(
         dtype=int,
         default_value=9095,
@@ -94,7 +92,6 @@ class ThermoMicroscope(Microscope):
     def _connect(self):
         self._connect_hardware()
         self._connect_detector_proxies()
-        self._link_hardware_attributes()
         self.set_state(DevState.ON)
 
     def _connect_hardware(self) -> None:
@@ -119,6 +116,7 @@ class ThermoMicroscope(Microscope):
             "haadf": self.haadf_device_address,
             "AdvancedAcquistion": self.advanced_acquisition_device_address,
             "eds":  self.eds_device_address,
+            "stage": self.stage_device_address,
         }
         print(addresses)
         for name, address in addresses.items():
@@ -131,9 +129,7 @@ class ThermoMicroscope(Microscope):
             except tango.DevFailed as e:
                 self.error_stream(f"Failed to connect to {name} proxy at {address}: {e}")
 
-    def _link_hardware_attributes(self) -> None:
-        # TODO: read off stage position and beta tilt enabled or not, set proxy attributes with these values.
-        pass
+
     # ------------------------------------------------------------------
     # Attribute read methods
     # ------------------------------------------------------------------

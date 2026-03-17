@@ -49,23 +49,30 @@ class Microscope(Device, metaclass=CombinedMeta):
         doc="Tango device address for the HAADF settings device. "
             "DB mode: 'test/detector/haadf' "
             "No-DB mode: 'tango://127.0.0.1:8888/test/nodb/haadf#dbase=no'",
-)
-    
+    )
+
     eds_device_address = device_property(
         dtype=str,
         doc="Tango device address for the EDS settings device. "
             "DB mode: 'test/detector/eds' "
             "No-DB mode: 'tango://127.0.0.1:8887/test/nodb/haadf#dbase=no'",
-)
+    )
+
     advanced_acquisition_device_address = device_property(
         dtype=str,
         doc="Tango device address for the HAADF settings device. "
             "DB mode: 'test/detector/advancedacquisition' "
             "No-DB mode: 'tango://127.0.0.1:8888/test/nodb/advancedacquisition#dbase=no'",
-)
+    )
+
+    stage_device_address = device_property(
+        dtype=str,
+        doc="Tango device address for the STAGE settings device. "
+            "DB mode: 'test/hardware/stage' "
+            "No-DB mode: 'tango://127.0.0.1:8888/test/nodb/stage#dbase=no'",
+    )
 
     # Add further detector device_property entries here as detectors are added
-    # eds_device_address   = device_property(dtype=str, default_value="test/detector/eds")
     # eels_device_address  = device_property(dtype=str, default_value="test/detector/eels")
 
     # ------------------------------------------------------------------
