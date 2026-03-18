@@ -151,13 +151,7 @@ class ThermoMicroscope(Microscope):
     # ------------------------------------------------------------------
     # TODO:if self._microscope is not None: checks should go to init functions than sitting in commands 
 
-    def _acquire_stem_image(
-        self,
-        detector_name: str,
-        image_width: int,
-        image_height: int,
-        dwell_time: float,
-    ) -> np.ndarray:
+    def _acquire_stem_image(self,detector_name: str,) -> np.ndarray:
         """
         Call AutoScript acquisition and return numpy array.
 
@@ -169,19 +163,8 @@ class ThermoMicroscope(Microscope):
                 haadf = self._detector_proxies['haadf']
                 detector_type = DetectorType.HAADF # :TODO --> make it general and check
                 dwell_time = haadf.read_attribute("dwell_time").value
-                image_width = haadf.read_attribute("image_width").value
-                imsize = int(image_width)
-                # print(ImageSize.PRESET_256)
-                # if image_width == 256:
-                    # imsize = ImageSize.PRESET_256
-                # elif image_width == 512:
-                #     imsize = ImageSize.PRESET_512
-                # elif image_width == 1024:
-                #     imsize = ImageSize.PRESET_1024
-                # elif image_width == 2048:
-                #     imsize = ImageSize.PRESET_2048
-                # elif image_width == 4096:
-                #     imsize = ImageSize.PRESET_4096
+                imsize = haadf.read_attribute("imsize").value
+                imsize = int(imsize)
 
                 # take image
                 adorned = self._microscope.acquisition.acquire_stem_image(

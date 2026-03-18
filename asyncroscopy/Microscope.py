@@ -203,17 +203,16 @@ class Microscope(Device, metaclass=CombinedMeta):
 
         # Read acquisition settings from the detector device
         dwell_time: float = proxy.dwell_time
-        width: int  = proxy.image_width
-        height: int = proxy.image_height
+        imsize: int  = proxy.imsize
+
 
         # TODO: map (width, height) → AutoScript ImageSize enum
-        # e.g. ImageSize.PRESET_1024 when width == height == 1024
 
-        adorned_image = self._acquire_stem_image(detector_name, width, height, dwell_time)
+        adorned_image = self._acquire_stem_image(detector_name)
 
         metadata = {
             "detector": detector_name,
-            "shape": [height, width],
+            "shape": [imsize, imsize],
             "dtype": str(adorned_image.dtype),
             "dwell_time": dwell_time,
             "timestamp": time.time(),

@@ -34,21 +34,14 @@ class HAADF(Device):
         doc="Per-pixel dwell time in seconds (e.g. 1e-6 = 1 µs)",
     )
 
-    image_width = attribute(
-        label="Image Width",
+    imsize = attribute(
+        label="Image Size",
         dtype=int,
         access=AttrWriteType.READ_WRITE,
         unit="px",
         doc="Acquisition width in pixels (should match an AutoScript ImageSize preset)",
     )
 
-    image_height = attribute(
-        label="Image Height",
-        dtype=int,
-        access=AttrWriteType.READ_WRITE,
-        unit="px",
-        doc="Acquisition height in pixels",
-    )
 
     # ------------------------------------------------------------------
     # Initialisation
@@ -60,8 +53,7 @@ class HAADF(Device):
 
         # Sensible defaults — operators override via Tango DB or client writes
         self._dwell_time: float = 1e-6   # 1 µs
-        self._image_width: int = 1024
-        self._image_height: int = 1024
+        self._imsize: int = 1024
 
         self.info_stream("HAADF device initialised")
 
@@ -75,17 +67,11 @@ class HAADF(Device):
     def write_dwell_time(self, value: float) -> None:
         self._dwell_time = value
 
-    def read_image_width(self) -> int:
+    def read_imsize(self) -> int:
         return self._image_width
 
-    def write_image_width(self, value: int) -> None:
+    def write_imsize(self, value: int) -> None:
         self._image_width = value
-
-    def read_image_height(self) -> int:
-        return self._image_height
-
-    def write_image_height(self, value: int) -> None:
-        self._image_height = value
 
 
 # ----------------------------------------------------------------------
