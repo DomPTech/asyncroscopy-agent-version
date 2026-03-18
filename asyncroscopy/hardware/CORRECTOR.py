@@ -143,10 +143,10 @@ class CORRECTOR(Device):
             proxy.run_tableau("Fast 18")
             proxy.run_tableau("Full 0")
         """
+    
         parts = args.strip().split()
         tab_type, angle_str = parts
         angle = float(angle_str)
-
         return self._call("acquireTableau", {"tabType": tab_type, "angle": angle})
 
     @command(dtype_out=DevString)
