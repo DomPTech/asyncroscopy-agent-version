@@ -51,6 +51,13 @@ class Microscope(Device, metaclass=CombinedMeta):
             "No-DB mode: 'tango://127.0.0.1:8888/test/nodb/haadf#dbase=no'",
     )
 
+    scan_device_address = device_property(
+        dtype=str,
+        doc="Tango device address for the SCAN settings device. "
+            "DB mode: 'test/detector/scan' "
+            "No-DB mode: 'tango://127.0.0.1:8888/test/nodb/scan#dbase=no'",
+    )
+
     eds_device_address = device_property(
         dtype=str,
         doc="Tango device address for the EDS settings device. "
@@ -162,7 +169,17 @@ class Microscope(Device, metaclass=CombinedMeta):
 
         detector_name = detector_name.lower().strip()
         proxy = self._detector_proxies.get(detector_name)
-        
+        if proxy is None:
+            available = ", ".join(sorted(self._detector_proxies.keys())) or "none"
+            tango.Except.throw_exception(
+                "UnknownDetector",
+                (
+                    f"Detector '{detector_name}' is not configured or connected. "
+                    f"Available detectors: {available}"
+                ),
+                "get_spectrum()",
+            )
+
         # Read acquisition settings from the detector device
         exposure_time = proxy.exposure_time # float
 
@@ -170,17 +187,21 @@ class Microscope(Device, metaclass=CombinedMeta):
 
         metadata = {
             "detector": detector_name,
-            "dtype": str(adorned_spectrum.dtype),
             "dwell_time": exposure_time,
             "timestamp": time.time(),
             # TODO: add metadata from adorned_spectrum.metadata when using real AutoScript
         }
 
-        return json.dumps(metadata), adorned_spectrum.tobytes()
+        if isinstance(adorned_spectrum, dict):
+            raw_bytes = json.dumps(adorned_spectrum).encode("utf-8")
+        else:
+            raw_bytes = adorned_spectrum.tobytes()
+
+        return json.dumps(metadata), raw_bytes
 
 
-    @command(dtype_in=str, dtype_out=DevEncoded)#In PyTango, DevEncoded is a special Tango data type designed to send binary data + a small description string together as a single return value.
-    def get_image(self, detector_name: str) -> tuple[str, bytes]:
+    @command(dtype_out=DevEncoded)#In PyTango, DevEncoded is a special Tango data type designed to send binary data + a small description string together as a single return value.
+    def get_scanned_image(self) -> tuple[str, bytes]:
         """
         Acquire a single STEM image from the named detector.
 
@@ -197,23 +218,18 @@ class Microscope(Device, metaclass=CombinedMeta):
             timestamp, and any other relevant metadata.
             raw_bytes is the flat numpy array bytes; reshape using shape from metadata.
         """
-        detector_name = detector_name.lower().strip()
+        # check active detectors
+        scan = self._detector_proxies.get("scan")
 
-        proxy = self._detector_proxies.get(detector_name)
+        # Read scan settings from the detector device
+        dwell_time=scan.dwell_time
+        imsize=scan.imsize
 
-        # Read acquisition settings from the detector device
-        dwell_time: float = proxy.dwell_time
-        width: int  = proxy.image_width
-        height: int = proxy.image_height
-
-        # TODO: map (width, height) → AutoScript ImageSize enum
-        # e.g. ImageSize.PRESET_1024 when width == height == 1024
-
-        adorned_image = self._acquire_stem_image(detector_name, width, height, dwell_time)
+        adorned_image = self._acquire_stem_image(imsize, dwell_time, ['haadf'])
 
         metadata = {
-            "detector": detector_name,
-            "shape": [height, width],
+            "detector": 'haadf',
+            "shape": [imsize, imsize],
             "dtype": str(adorned_image.dtype),
             "dwell_time": dwell_time,
             "timestamp": time.time(),
