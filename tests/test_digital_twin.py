@@ -22,7 +22,7 @@ class TestThermoDigitalTwin:
         assert twin_proxy.manufacturer == "UTKTeam"
 
     def test_get_image_returns_valid_data(self, twin_proxy: tango.DeviceProxy):
-        json_meta, raw_bytes = twin_proxy.get_image("haadf")
+        json_meta, raw_bytes = twin_proxy.get_scanned_image()
         meta = json.loads(json_meta)
         
         assert meta["detector"] == "haadf"
@@ -35,4 +35,4 @@ class TestThermoDigitalTwin:
 
     def test_unknown_detector_raises(self, twin_proxy: tango.DeviceProxy):
         with pytest.raises(tango.DevFailed):
-            twin_proxy.get_image("void")
+            twin_proxy.get_scanned_image() # void?

@@ -10,19 +10,17 @@ class TestThermoMicroscope:
 
     def test_scan_defaults_are_visible_through_proxy(self, scan_proxy: tango.DeviceProxy) -> None:
         scan_proxy.dwell_time = 1e-6
-        scan_proxy.image_width = 1024
-        scan_proxy.image_height = 1024
+        scan_proxy.imsize = 1024
         assert scan_proxy.state() == tango.DevState.ON
         assert scan_proxy.dwell_time == pytest.approx(1e-6)
-        assert scan_proxy.image_width == 1024
-        assert scan_proxy.image_height == 1024
+        assert scan_proxy.imsize == 1024
 
     def test_get_image_returns_valid_encoded_data(
         self,
         thermo_proxy: tango.DeviceProxy,
         patched_single_image: pytest.MonkeyPatch,
     ) -> None:
-        json_meta, raw_bytes = thermo_proxy.get_image()
+        json_meta, raw_bytes = thermo_proxy.get_scanned_image()
         meta = json.loads(json_meta)
 
         assert meta["detector"] == "haadf"
@@ -44,7 +42,7 @@ class TestThermoMicroscope:
         scan_proxy.dwell_time = 2e-6
         scan_proxy.imsize = 256
 
-        json_meta, raw_bytes = thermo_proxy.get_image()
+        json_meta, raw_bytes = thermo_proxy.get_scanned_image()
         meta = json.loads(json_meta)
 
         assert meta["detector"] == "haadf"
@@ -58,7 +56,7 @@ class TestThermoMicroscope:
 
     def test_unknown_detector_raises(self, thermo_proxy: tango.DeviceProxy, patched_single_image: pytest.MonkeyPatch) -> None:
         with pytest.raises(tango.DevFailed) as exc:
-            thermo_proxy.get_image("void")
+            thermo_proxy.get_scanned_image() # void?
 
         err_text = str(exc.value)
 

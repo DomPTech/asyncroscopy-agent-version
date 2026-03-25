@@ -19,7 +19,7 @@ class TestSCANAttributes:
         assert scan_proxy.dwell_time == pytest.approx(5e-6)
 
     def test_default_imsize(self, scan_proxy):
-        assert scan_proxy.imsize == 1024
+        assert scan_proxy.imsize == 512
 
     def test_write_imsize(self, scan_proxy):
         scan_proxy.imsize = 512
