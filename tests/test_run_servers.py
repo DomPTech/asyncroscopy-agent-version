@@ -165,7 +165,7 @@ def test_load_agent_config():
 
     assert config.agent.name == "Asyncroscopy_Agent_MCP"
     assert config.agent.transport == "streamable-http"
-    assert config.agent.http_port == 8001
+    assert config.agent.http_port == 8002
     assert config.agent.model == "gemma4:31b"
     assert config.agent.mcp_urls == ["http://127.0.0.1:8000/mcp"]
     assert [entry["name"] for entry in config.agent.startup_agents] == ["base", "image"]
