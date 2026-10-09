@@ -101,17 +101,19 @@ class AgentMCPServer:
             print("  - set_max_steps(max_steps: int) -> int")
             print(f"\nInheriting tools from MCP servers: {', '.join(self.mcp_urls)}")
 
-    async def query_agent(self, prompt: str) -> str:
-        """Ask the agent swarm to carry out a request and return its final response.
+    async def query_agent(self, prompt: str, include_transcript: bool = True) -> str:
+        """
+        Ask the agent swarm to carry out a request and return its response.
 
-        Use this for anything that needs microscope tools, e.g. "acquire a scanned
-        HAADF image, then an EDS spectrum". Only one query runs at a time.
+        If `include_transcript` is true (default), the routing decisions, 
+        tool calls, and generated text will also be included above the final answer.
         """
         async with self._query_lock:
-            return await self.swarm.query(prompt)
+            return await self.swarm.query(prompt, include_transcript=include_transcript)
 
     def spawn_agent(self, config: str) -> str:
-        """Add a worker agent to the swarm, returning its name or an empty string on failure.
+        """
+        Add a worker agent to the swarm, returning its name or an empty string on failure.
 
         Args:
             config (str): JSON with 'name', 'system_prompt', optional 'tools' (glob
@@ -140,7 +142,8 @@ class AgentMCPServer:
         return self.swarm.set_max_steps(max_steps)
 
     def start(self, transport: str | None = None, **kwargs) -> None:
-        """Register the swarm tools and begin serving the MCP protocol.
+        """
+        Register the swarm tools and begin serving the MCP protocol.
 
         The swarm itself is initialized by this instance's FastMCP lifespan, so
         that it runs on the same event loop that serves tool calls.

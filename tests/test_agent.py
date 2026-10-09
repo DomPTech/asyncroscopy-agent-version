@@ -312,7 +312,7 @@ class TestRunSwarm:
 
         captured_messages = []
 
-        async def fake_stream(executor, messages, agent_label=""):
+        async def fake_stream(executor, messages, agent_label="", transcript=None):
             captured_messages.extend(messages)
             return "done"
 
@@ -504,7 +504,7 @@ class TestAgentMCPServerTools:
         server.swarm.query = AsyncMock(return_value="42")
 
         assert asyncio.run(server.query_agent("what is the answer?")) == "42"
-        server.swarm.query.assert_awaited_once_with("what is the answer?")
+        server.swarm.query.assert_awaited_once_with("what is the answer?", include_transcript=True)
 
     def test_complete_tool_calls_swarm_complete(self) -> None:
         server = self._server()

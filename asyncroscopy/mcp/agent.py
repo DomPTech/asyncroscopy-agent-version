@@ -233,12 +233,21 @@ class AgentSwarm:
     # Public commands
     # ----------------------------------------------------------------------
 
-    async def query(self, prompt: str) -> str:
-        """Query the agent swarm with a prompt, returning the final response."""
+    async def query(self, prompt: str, include_transcript: bool = True) -> str:
+        """
+        Query the agent swarm with a prompt, returning the final response.
+
+        If `include_transcript` is true (default), the routing decisions, 
+        tool calls, and generated text are also included.
+        """
         if not self.ready:
             return f"Agent Error: no model is available ({self.startup_error})."
         try:
-            return await self._run_swarm(prompt)
+            transcript: list[str] | None = [] if include_transcript else None
+            final = await self._run_swarm(prompt, transcript=transcript)
+            if not transcript:
+                return final
+            return "\n".join([*transcript, "", "FINAL ANSWER:", final])
         except Exception as e:
             print(f"\n[CRITICAL ERROR]: {e}")
             return str(e)
@@ -360,12 +369,23 @@ class AgentSwarm:
             print(f"[SUPERVISOR ERROR]: {e}")
             return fallback, ""
 
-    async def _stream_agent(self, agent_executor, messages, agent_label: str = "") -> str:
-        """Run a create_agent executor while streaming tokens and tool calls to stdout."""
+    async def _stream_agent(
+        self,
+        agent_executor,
+        messages,
+        agent_label: str = "",
+        transcript: list[str] | None = None,
+    ) -> str:
+        """Run a create_agent executor while streaming tokens and tool calls."""
         prefix = f"[{agent_label}] " if agent_label else ""
         start_time = time.time()
         first_token_received = False
         final_content = ""
+        generated = ""
+
+        def record(line: str) -> None:
+            if transcript is not None:
+                transcript.append(line)
 
         async for event in agent_executor.astream_events({"messages": messages}, version="v2"):
             kind = event["event"]
@@ -380,9 +400,9 @@ class AgentSwarm:
                 if not first_token_received:
                     ttft = time.time() - start_time
                     print(f"\n{prefix}[DIAGNOSTIC]: Time to first token: {ttft:.2f}s")
-                    print(f"{prefix}[GENERATION]: ", end="")
                     first_token_received = True
                 if chunk.content:
+                    generated += chunk.content
                     print(chunk.content, end="")
                     sys.stdout.flush()
 
@@ -397,20 +417,35 @@ class AgentSwarm:
             elif kind == "on_tool_start":
                 tool_name = event["name"]
                 tool_input = event["data"].get("input")
+                line = f"{prefix}EXECUTING TOOL: {tool_name}({tool_input})"
                 print(f"{prefix}[EXECUTING TOOL]: {tool_name}({tool_input})")
+                record(line)
 
             elif kind == "on_tool_end":
                 output = event["data"].get("output")
                 print(f"{prefix}[TOOL RESULT]: {output}")
+                record(f"{prefix}TOOL RESULT: {output}")
+
+        if generated.strip():
+            record(f"{prefix}{generated.strip()}")
 
         if final_content:
             print(f"{prefix}[FINAL ANSWER RETURNED]:\n{final_content}\n{'=' * 50}")
         return final_content
 
-    async def _run_swarm(self, prompt: str) -> str:
-        """Run the agent swarm with a given prompt, returning the final response."""
+    async def _run_swarm(self, prompt: str, transcript: list[str] | None = None) -> str:
+        """
+        Run the agent swarm with a given prompt, returning the final response.
+
+        When `transcript` is supplied, it accumulates the run's routing decisions,
+        tool calls, and generated text for the caller to display.
+        """
         if not self._agents:
             return "Swarm Error: No agents available. Please use the spawn_agent tool to create at least one worker before querying."
+
+        def record(line: str) -> None:
+            if transcript is not None:
+                transcript.append(line)
 
         # If there is a single agent, run it like a single agent (no need for supervisor/routing)
         if len(self._agents) == 1:
@@ -418,7 +453,7 @@ class AgentSwarm:
             agent_executor = self._build_agent_executor(agent)
             print(f"\n[{agent.name}] is working...")
             return await self._stream_agent(
-                agent_executor, [HumanMessage(content=prompt)], agent_label=agent.name
+                agent_executor, [HumanMessage(content=prompt)], agent_label=agent.name, transcript=transcript
             )
 
         builder = StateGraph(AgentState)
@@ -432,9 +467,10 @@ class AgentSwarm:
             async def node(state: AgentState):
                 task = state.get("current_task", "Execute assigned tool.")
                 print(f"\n[{agent.name}] assigned task: '{task}'")
+                record(f"{agent.name} assigned task: {task}")
 
                 content = await self._stream_agent(
-                    agent_executor, [HumanMessage(content=task)], agent_label=agent.name
+                    agent_executor, [HumanMessage(content=task)], agent_label=agent.name, transcript=transcript
                 )
                 print(f"[{agent.name}] finished.\n")
                 return {
@@ -484,6 +520,8 @@ class AgentSwarm:
             )
             response = await self._model.ainvoke([sys_prompt] + state["messages"])
             next_agent, subtask = self._parse_routing_decision(response.content, valid_options, fallback)
+            print(f"[Supervisor] Decision: {next_agent}")
+            record(f"Supervisor -> {next_agent}: {subtask}" if next_agent != "FINISH" else "Supervisor -> FINISH")
             if next_agent == "FINISH":
                 print("[Supervisor] Decision: FINISH\n")
 
